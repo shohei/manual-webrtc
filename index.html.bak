@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebRTC 1 to 1 signaling</title>  
+  <title>manual-webrtc</title>  
+  <script src="http://localhost:9001/socket.io/socket.io.js"></script>
 </head>
 <body>
   <button type="button" onclick="startVideo();">Start video</button>
@@ -27,7 +28,7 @@
   
   <p>
    ICE Candidate to send:<br />
-   <textarea id="text-for-send-ice" rows="5" cols="100" disabled="1">ICE Candidate to send</textarea>
+   <textarea id="text-for-send-ice" rows="5" cols="100" disabled="1" onclick="this.focus(); this.select();">ICE Candidate to send</textarea>
   </p>
   <p>  
    ICE Candidates to receive:<br />
@@ -35,9 +36,6 @@
    <button type="button" onclick="onICE();">Receive ICE Candidates</button>
   </p>
   
-  <!---- socket ------>
-  <script src="http://133.242.160.150:9001/socket.io/socket.io.js"></script>
-  <!-- <script src="./socket.io.js"></script> -->
   
   <script>
   var localVideo = document.getElementById('local-video');
@@ -45,43 +43,9 @@
   var localStream = null;
   var peerConnection = null;
   var peerStarted = false;
-  var mediaConstraints = {'mandatory': {'OfferToReceiveAudio':false, 'OfferToReceiveVideo':true }};
+  //var mediaConstraints = {'mandatory': {'OfferToReceiveAudio':false, 'OfferToReceiveVideo':true }};
+  var mediaConstraints = {'mandatory': {'OfferToReceiveAudio':true, 'OfferToReceiveVideo':true }};
  
-  
-  // ---- socket ------
-  // create socket
-  var socketReady = false;
-  var port = 9001;
-  //var socket = io.connect('http://localhost:' + port + '/');
-  var socket = io.connect('http://133.242.160.150:' + port + '/');
-  // socket: channel connected
-  socket.on('connect', onOpened)
-        .on('message', onMessage);
- 
-  function onOpened(evt) {
-    console.log('socket opened.');
-    socketReady = true;
-  }
- 
-  // socket: accept connection request
-  function onMessage(evt) {
-    if (evt.type === 'offer') {
-      console.log("Received offer, set offer, sending answer....")
-      onOffer(evt);      
-    } else if (evt.type === 'answer' && peerStarted) {
-      console.log('Received answer, settinng answer SDP');
-      onAnswer(evt);
-    } else if (evt.type === 'candidate' && peerStarted) {
-      console.log('Received ICE candidate...');
-      onCandidate(evt);
-    } else if (evt.type === 'user dissconnected' && peerStarted) {
-      console.log("disconnected");
-      stop();
-    }
-  }
- 
-  
-  
   // ----------------- handshake --------------
   var textForSendSDP = document.getElementById('text-for-send-sdp');
   var textForSendICE = document.getElementById('text-for-send-ice');
@@ -95,13 +59,16 @@
     var evt = JSON.parse(text);
     if (peerConnection) {
       onAnswer(evt);
+      
+      textForSendICE.focus();
+      textForSendICE.select();
     }
     else {
       onOffer(evt);
     }
     
     textToReceiveSDP.value ="";
-  }  
+  }
   
   //--- multi ICE candidate ---
   function onICE() {
@@ -113,6 +80,9 @@
     }
  
     textToReceiveICE.value ="";
+    
+    textForSendICE.focus();
+    textForSendICE.select();
   }
   
   
@@ -121,7 +91,8 @@
     console.log(evt);
     setOffer(evt);
     sendAnswer(evt);
-    peerStarted = true;  // ++
+
+    peerStarted = true;  // <--- ここを追加
   }
   
   function onAnswer(evt) {
@@ -141,21 +112,25 @@
     var text = JSON.stringify(sdp);
     console.log("---sending sdp text ---");
     console.log(text);
-    textForSendSDP.value = text;
     
+    textForSendSDP.value = text;
+    textForSendSDP.focus();
+    textForSendSDP.select();
+
     // send via socket
-    socket.json.send(sdp);
+    socket.json.send(sdp); // <--- ここを追加
   }
   
   function sendCandidate(candidate) {
     var text = JSON.stringify(candidate);
     console.log("---sending candidate text ---");
     console.log(text);
+ 
     textForSendICE.value = (textForSendICE.value + CR + iceSeparator + CR + text + CR);
     textForSendICE.scrollTop = textForSendICE.scrollHeight;
-    
+
     // send via socket
-    socket.json.send(candidate);
+    socket.json.send(candidate); // <--- ここを追加
   }
   
   // ---------------------- video handling -----------------------
@@ -274,8 +249,8 @@
   // -------- handling user UI event -----
   // start the connection upon user request
   function connect() {
-    if (!peerStarted && localStream && socketReady) { // **
-    //if (!peerStarted && localStream) { // --
+    //if (!peerStarted && localStream && channelReady) {
+    if (!peerStarted && localStream) {
       sendOffer();
       peerStarted = true;
     } else {
@@ -292,11 +267,12 @@
   function stop() {
     peerConnection.close();
     peerConnection = null;
-    peerStarted = false;
+    peerStarted = false;    
+
+    peerStarted = false;  // <--- ここを追加
   }
  
   </script>
 </body>
 </html>
-
 
