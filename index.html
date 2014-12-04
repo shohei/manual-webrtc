@@ -184,7 +184,10 @@
   // ---------------------- connection handling -----------------------
   function prepareNewConnection() {
     // var pc_config = {"iceServers":[]};
-    var pc_config = {"iceServers":[ {"url":"stun:133.242.160.150:3478"} ]};
+    var pc_config = {"iceServers":[ 
+        {"url":"stun:133.242.160.150:3478"},
+        {"url":"turn:133.242.160.150:3478", "username":"shohei", "credential":"turnpassword"}
+    ]};
     var peer = null;
     try {
       peer = new webkitRTCPeerConnection(pc_config);
